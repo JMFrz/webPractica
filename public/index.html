@@ -475,6 +475,15 @@
 
     // Mostrar la aplicación después del login
     function showApp() {
+      // Limpiar estado anterior
+      selectedMessage = null;
+      messages = [];
+      
+      // Resetear vista a estado inicial
+      document.getElementById('emptyDetail').classList.remove('hidden');
+      document.getElementById('messageDetail').classList.add('hidden');
+      document.getElementById('composeForm').classList.add('hidden');
+      
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appScreen').style.display = 'block';
       document.getElementById('userName').textContent = currentUser?.email || 'Usuario';
@@ -487,6 +496,14 @@
       localStorage.removeItem('jwt');
       currentToken = null;
       currentUser = null;
+      selectedMessage = null;
+      messages = [];
+      
+      // Resetear vista
+      document.getElementById('emptyDetail').classList.remove('hidden');
+      document.getElementById('messageDetail').classList.add('hidden');
+      document.getElementById('composeForm').classList.add('hidden');
+      
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('appScreen').style.display = 'none';
     }
