@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TextME</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 960px; }
+    h1 { margin-bottom: 0; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 12px 0; border-radius: 6px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    label { display: block; margin-top: 8px; font-weight: 600; }
+    input, textarea, button { width: 100%; padding: 8px; margin-top: 4px; }
+    textarea { min-height: 80px; }
+    pre { background: #f8f8f8; padding: 8px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>TextME</h1>
+  <p>Login con Google o GitHub para obtener un token (o pega uno que ya tengas) y prueba la API.</p>
+
+  <div class="card">
+    <h3>Token de sesión</h3>
+    <label>JWT (Authorization: Bearer)</label>
+    <textarea id="token" placeholder="Pega aquí el token devuelto por /api/auth/google o /api/auth/github"></textarea>
+    <button id="saveToken">Guardar token</button>
+    <div id="me"></div>
+  </div>
+
+  <div class="card">
+    <h3>Login con Google</h3>
+    <p>Necesitas un Client ID web de Google. Reemplaza data-client_id abajo o añade en .env y usa un frontend real.</p>
+    <div id="g_id_onload"
+         data-client_id="1078005804242-v0beo997nk80j2h80k8ag6940ppf71a8.apps.googleusercontent.com"
+         data-auto_prompt="false"
+         data-callback="handleGoogle"></div>
+    <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </div>
+
+  <div class="card">
+    <h3>Login con GitHub (manual)</h3>
+    <p>En GitHub crea una OAuth App y obtén un <code>code</code> tras el redirect. Luego envíalo al backend.</p>
+    <label>Code de GitHub</label>
+    <input id="ghCode" placeholder="pega aquí el code que recibes tras autorizar" />
+    <button id="ghLogin">Intercambiar code por token</button>
+  </div>
+
+  <div class="card">
+    <h3>Obtener cabeceras por usuario</h3>
+    <label>Email</label>
+    <input id="email" placeholder="usuario@example.com" />
+    <button id="btnList">Listar mensajes</button>
+    <pre id="listResult"></pre>
+  </div>
+
+  <div class="card">
+    <h3>Obtener mensaje completo</h3>
+    <label>ID de mensaje</label>
+    <input id="msgId" placeholder="msg_xxx" />
+    <button id="btnGet">Obtener</button>
+    <pre id="getResult"></pre>
+  </div>
+
+  <div class="card">
+    <h3>Crear / Responder mensaje</h3>
+    <label>De</label>
+    <input id="from" placeholder="de" />
+    <label>Para</label>
+    <input id="to" placeholder="para" />
+    <label>Asunto</label>
+    <input id="subject" placeholder="asunto" />
+    <label>Contenido</label>
+    <textarea id="content" placeholder="contenido"></textarea>
+    <label>Adjuntar imagen (opcional)</label>
+    <input type="file" id="file" accept="image/*" />
+    <button id="btnCreate">Enviar mensaje</button>
+    <pre id="createResult"></pre>
+  </div>
+
+  <script>
+    const tokenInput = document.getElementById('token');
+    const saved = localStorage.getItem('jwt');
+    if (saved) tokenInput.value = saved;
+
+    document.getElementById('saveToken').onclick = () => {
+      localStorage.setItem('jwt', tokenInput.value.trim());
+      loadMe();
+    };
+
+    async function api(url, options = {}) {
+      const token = localStorage.getItem('jwt');
+      options.headers = options.headers || {};
+      if (token) options.headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(url, options);
+      const data = await res.json();
+      return { status: res.status, data };
+    }
+
+    async function loadMe() {
+      const resp = await api('/api/auth/me');
+      document.getElementById('me').textContent = JSON.stringify(resp, null, 2);
+    }
+    loadMe();
+
+    document.getElementById('btnList').onclick = async () => {
+      const email = document.getElementById('email').value;
+      const resp = await api('/api/messages/user/' + encodeURIComponent(email));
+      document.getElementById('listResult').textContent = JSON.stringify(resp, null, 2);
+    };
+
+    document.getElementById('btnGet').onclick = async () => {
+      const id = document.getElementById('msgId').value;
+      const resp = await api('/api/message/' + encodeURIComponent(id));
+      document.getElementById('getResult').textContent = JSON.stringify(resp, null, 2);
+    };
+
+    document.getElementById('btnCreate').onclick = async () => {
+      const fd = new FormData();
+      fd.append('de', document.getElementById('from').value);
+      fd.append('para', document.getElementById('to').value);
+      fd.append('asunto', document.getElementById('subject').value);
+      fd.append('contenido', document.getElementById('content').value);
+      const file = document.getElementById('file').files[0];
+      if (file) fd.append('adjunto', file);
+      const token = localStorage.getItem('jwt');
+      const res = await fetch('/api/message', {
+        method: 'POST',
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+        body: fd
+      });
+      const data = await res.json();
+      document.getElementById('createResult').textContent = JSON.stringify({ status: res.status, data }, null, 2);
+    };
+
+    // Google callback (GIS)
+    window.handleGoogle = async (response) => {
+      const idToken = response.credential;
+      const resp = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      const data = await resp.json();
+      if (data.token) {
+        localStorage.setItem('jwt', data.token);
+        tokenInput.value = data.token;
+        loadMe();
+      } else {
+        alert('Error login Google');
+      }
+    };
+
+    document.getElementById('ghLogin').onclick = async () => {
+      const code = document.getElementById('ghCode').value;
+      const resp = await fetch('/api/auth/github', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const data = await resp.json();
+      if (data.token) {
+        localStorage.setItem('jwt', data.token);
+        tokenInput.value = data.token;
+        loadMe();
+      } else {
+        alert('Error login GitHub: ' + (data.error || '')); 
+      }
+    };
+  </script>
+</body>
+</html>
