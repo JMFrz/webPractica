@@ -7,6 +7,9 @@ const dotenv = require('dotenv');
 // Cargar variables de entorno
 dotenv.config();
 
+// Evitar creación automática de colecciones no usadas
+mongoose.set('autoCreate', false);
+
 // Importar rutas
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');

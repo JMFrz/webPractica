@@ -10,8 +10,10 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: path.join(__dirname, '..', '.env') });
 }
 
+// Evitar creación automática de colecciones no usadas
+mongoose.set('autoCreate', false);
+
 // Importar rutas existentes
-const messageRoutes = require('../routes/messageRoutes');
 const userRoutes = require('../routes/userRoutes');
 const authRoutes = require('../routes/authRoutes');
 const reviewRoutes = require('../routes/reviewRoutes');
@@ -44,7 +46,6 @@ app.use(async (req, res, next) => {
 
 // Rutas
 app.use('/api', authRoutes);
-app.use('/api', messageRoutes);
 app.use('/api', userRoutes);
 app.use('/api', reviewRoutes);
 
