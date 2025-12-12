@@ -21,29 +21,50 @@ if (process.env.CLOUDINARY_URL) {
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// Función para hacer geocoding con OpenStreetMap Nominatim
+// Función para hacer geocoding con OpenStreetMap Nominatim (con reintentos y User-Agent)
 async function geocodeAddress(address) {
-  try {
-    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-      params: {
-        q: address,
-        format: 'json',
-        limit: 1
+  const maxRetries = 3;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Respetar rate-limit de Nominatim (1 req/seg). Espera en reintentos.
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
-    });
-    
-    if (response.data && response.data.length > 0) {
-      const result = response.data[0];
-      return {
-        lon: parseFloat(result.lon),
-        lat: parseFloat(result.lat)
-      };
+
+      const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: {
+          q: address,
+          format: 'json',
+          limit: 1,
+          addressdetails: 0
+        },
+        headers: {
+          'User-Agent': 'ResenyApp (https://github.com/JMFrz/webExamen)'
+        },
+        timeout: 15000
+      });
+
+      if (response.data && response.data.length > 0) {
+        const result = response.data[0];
+        return {
+          lon: parseFloat(result.lon),
+          lat: parseFloat(result.lat)
+        };
+      }
+
+      // Sin resultados, intenta de nuevo (o sal si es el último intento)
+      lastError = new Error('No results');
+
+    } catch (error) {
+      lastError = error;
+      console.error(`Geocoding attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
     }
-    return null;
-  } catch (error) {
-    console.error('Geocoding error:', error.message);
-    return null;
   }
+
+  console.error('Geocoding failed after retries:', lastError?.message || 'unknown error');
+  return null;
 }
 
 // Función para subir imágenes a Cloudinary
