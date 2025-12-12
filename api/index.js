@@ -14,6 +14,7 @@ if (process.env.NODE_ENV !== 'production') {
 const messageRoutes = require('../routes/messageRoutes');
 const userRoutes = require('../routes/userRoutes');
 const authRoutes = require('../routes/authRoutes');
+const reviewRoutes = require('../routes/reviewRoutes');
 
 // Conexión a MongoDB (reutiliza conexión si ya está abierta)
 async function connectDB() {
@@ -45,23 +46,20 @@ app.use(async (req, res, next) => {
 app.use('/api', authRoutes);
 app.use('/api', messageRoutes);
 app.use('/api', userRoutes);
+app.use('/api', reviewRoutes);
 
 // Ruta raíz (info)
 app.get('/', (req, res) => {
   res.json({
-    message: 'TextME - Aplicación de Mensajería Electrónica (Vercel)',
-    version: '1.0.0',
+    message: 'TextME - Aplicación de Reseñas con Mapas (Vercel)',
+    version: '2.0.0',
     endpoints: {
-      'GET /api/messages/user/:email': 'Obtener cabeceras de mensajes de un usuario',
-      'GET /api/message/:id': 'Obtener mensaje completo por ID',
-      'POST /api/message': 'Crear nuevo mensaje',
+      'GET /api/reviews': 'Obtener listado de reseñas',
+      'GET /api/review/:id': 'Obtener detalle de reseña',
+      'POST /api/review': 'Crear nueva reseña',
       'POST /api/auth/google': 'Login con Google (idToken)',
       'POST /api/auth/github': 'Login con GitHub (code)',
-      'GET /api/auth/me': 'Obtener datos del usuario autenticado',
-      'POST /api/users': 'Crear usuario',
-      'GET /api/users': 'Listar usuarios',
-      'GET /api/users/:id': 'Obtener usuario por ID',
-      'GET /api/users/email/:email': 'Obtener usuario por email'
+      'GET /api/auth/me': 'Obtener datos del usuario autenticado'
     }
   });
 });
