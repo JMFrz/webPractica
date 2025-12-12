@@ -78,4 +78,4 @@ const reviewSchema = new mongoose.Schema(
 // Índice geoespacial para búsquedas por ubicación
 reviewSchema.index({ 'coordenadas': '2dsphere' });
 
-module.exports = mongoose.model('Review', reviewSchema);
+module.exports = mongoose.model('Review', reviewSchema, 'Review');
